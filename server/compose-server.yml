@@ -9,12 +9,14 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
       - SUBDOMAINS=subdomain1,subdomain2
-      - TOKEN=token
-      - LOG_FILE=true
+      TOKEN: /run/secrets/duckdns_token
+      LOG_FILE: "true"
     volumes:
       - /path/to/appdata/config:/config #optional
     labels:
       io.containers.autoupdate: "registry"
+    secrets:
+      - duckdns_token
     
   reverse-proxy:
     #The original v2 Traefik docker image
@@ -32,5 +34,9 @@ services:
       - /var/run/podman/podman.sock:/var/run/docker.sock:Z
     labels:
       io.containers.autoupdate: "registry"
-    
-      
+
+secrets:
+  duckdns_token:
+    file: .secrets.d/duckdns_token.txt
+  duckdns_domain:
+    file: .secrets.d/duckdns_domain.txt
