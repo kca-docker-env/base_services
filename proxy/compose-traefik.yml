@@ -1,0 +1,66 @@
+version: "3"
+services:
+  # duckdns:
+  #   env_file: ./conf.d/duckdns.env
+  #   image: lscr.io/linuxserver/duckdns:latest
+  #   container_name: duckdns
+  #   restart: unless-stopped
+  #   environment:
+  #     TZ: Europe/Berlin
+  #     SUBDOMAINS: /run/secrets/duckdns_domain
+  #     TOKEN: /run/secrets/duckdns_token
+  #     LOG_FILE: "true"
+  #   volumes:
+  #     - /path/to/appdata/config:/config #optional
+  #   labels:
+  #     io.containers.autoupdate: "registry"
+  #   secrets:
+  #     - duckdns_token
+    
+  traefik:
+    env_file: 
+      - ./conf.d/dns.env
+      - ./conf.d/traefik.env
+    hostname: ${SERVICES_TRAEFIK_HOST_NAME:-traefik}
+    image: ${SERVICES_TRAEFIK_IMAGE:-traefik}:${SERVICES_TRAEFIK_IMAGE_VERSION:-2.10}
+    container_name: ${SERVICES_TRAEFIK_CONTAINER_NAME:-traefik}
+    restart: unless-stopped
+    command: 
+      ## Enable Web-UI
+      - --api.insecure=true
+      ## Provider
+      - --providers.docker
+    ports:
+      - "80:80"     # HTTP  -> web
+      - "443:443"   # HTTPS -> websecure
+      - "8080:8080" # Web-UI (enabled by --api.insecure=true)
+    volumes:
+      - /etc/localtime:/etc/localtime:z
+      - /var/log/traefik/:/var/log/traefik/:z
+      - /var/run/podman/podman.sock:/var/run/docker.sock:z
+      - ./traefik/traefik.yml:/traefik.yml:Z
+      - ./traefik/acme_letsencrypt.json:/acme_letsencrypt.json:Z
+      - ./traefik/tls_letsencrypt.json:/tls_letsencrypt.json:Z
+      - ./traefik/dynamic_conf.yml:/dynamic_conf.yml:Z
+    labels:
+      - ${SERVICES_LABELS_AUTOUPDATE:-io.containers.autoupdate=registry}
+
+
+
+
+# Definition der Netzwerke, die von den Services verwendet werden
+networks:
+  # Definition des 'proxy' Netzwerks
+  proxy:
+    # Der Name des Netzwerks, kann über eine Umgebungsvariable angepasst werden
+    name: ${NETWORKS_PROXY_NAME:-proxy}
+    # Der Treiber, der für das Netzwerk verwendet wird, hier ist es 'bridge'
+    driver: bridge
+    # IP-Adress-Management-Konfiguration (IPAM)
+    ipam:
+      # Konfiguration des IP-Adress-Subnetzes für das Netzwerk
+      config:
+      - subnet: ${NETWORKS_PROXY_SUBNET_IPV4:-172.30.0.0/16}
+    # Wenn 'attachable' auf 'true' gesetzt ist, können Standalone-Container an dieses Netzwerk angehängt werden
+    attachable: true
+  
